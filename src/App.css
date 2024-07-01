@@ -36,3 +36,26 @@
     transform: rotate(360deg);
   }
 }
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.card-header {
+  background: #f0f0f0;
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.card-content {
+  padding: 1rem;
+}

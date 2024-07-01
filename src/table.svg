@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Table surface -->
+  <polygon points="0,16 64,16 58,58 6,58" fill="#8B4513"/>
+  <line x1="0" y1="16" x2="64" y2="16" stroke="#A0522D" stroke-width="2"/>
+
+  <!-- Cutting board -->
+  <polygon points="8,20 32,20 30,44 10,44" fill="#DEB887"/>
+
+  <!-- Knife -->
+  <polygon points="34,22 44,22 43,24 33,24" fill="#C0C0C0"/>
+  <polygon points="32,22 34,22 33,24 31,24" fill="#8B4513"/>
+
+  <!-- Bowl -->
+  <ellipse cx="48" cy="36" rx="10" ry="8" fill="#F0E68C"/>
+  <ellipse cx="48" cy="36" rx="8" ry="6" fill="#FFFACD"/>
+
+  <!-- Tomato -->
+  <circle cx="14" cy="28" r="5" fill="#FF6347"/>
+  <path d="M14 24 Q15 23 16 24" fill="#228B22"/>
+
+  <!-- Carrot -->
+  <polygon points="24,26 26,26 25,34 23,34" fill="#FFA500"/>
+  <path d="M24 26 Q25 24 26 26" fill="#228B22"/>
+
+  <!-- Lettuce leaves -->
+  <path d="M44 28 Q48 24 52 28" fill="none" stroke="#90EE90" stroke-width="2"/>
+  <path d="M46 32 Q48 28 50 32" fill="none" stroke="#90EE90" stroke-width="2"/>
+
+  <!-- Salt shaker -->
+  <polygon points="54,24 58,24 57,32 55,32" fill="#F5F5F5"/>
+  <polygon points="54,24 58,24 57,25 55,25" fill="#A9A9A9"/>
+  <rect x="55" y="31" width="2" height="1" fill="#A9A9A9"/>
+
+  <!-- Table edge -->
+  <polygon points="0,16 6,58 6,64 0,64" fill="#8B4513"/>
+  <polygon points="64,16 58,58 58,64 64,64" fill="#8B4513"/>
+</svg>
