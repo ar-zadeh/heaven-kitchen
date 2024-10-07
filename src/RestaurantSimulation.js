@@ -12,7 +12,7 @@ import {
 } from './components';
 import { Rnd } from 'react-rnd';
 import KitchenGUI from './KitchenGUI';
-
+import { Bell, Play, Trash2,Pause } from 'lucide-react';
 
 const INGREDIENTS = [
   { name: 'BEEF', deliveryTime: 10, cost: 5 },
@@ -56,7 +56,47 @@ const RestaurantSimulation = () => {
   const [groupCounter, setGroupCounter] = useState(1);
   const [alerts, setAlerts] = useState([]);
   const [cookCost, setCookCost] = useState(100); // Cost to hire a new cook
+  const renderPendingOrders = () => {
+    const groupedOrders = orders.reduce((acc, order) => {
+      if (!acc[order.groupId]) {
+        acc[order.groupId] = [];
+      }
+      acc[order.groupId].push(order);
+      return acc;
+    }, {});
 
+    return (
+      <Card>
+      <CardHeader>
+      <h2 className="text-xl font-bold mb-2">Pending Orders</h2>
+      </CardHeader>
+      <CardContent>
+      {Object.entries(groupedOrders).map(([groupId, groupOrders]) => (
+      <div key={groupId} className="mb-4">
+        <h3 className="text-lg font-semibold border-b pb-1 mb-2">Group {groupId}</h3>
+        {groupOrders.map((order, orderIndex) => (
+        <div key={orderIndex} className="mb-3">
+        <p className="font-medium text-sm">{order.name} (${order.price})</p>
+        <div className="grid grid-cols-2 gap-2 mt-1">
+        {cooks.map((cook, cookIndex) => (
+          <Button
+          key={cookIndex}
+          onClick={() => assignOrderToCook(cookIndex, orders.findIndex(o => o === order))}
+          disabled={cook.busy}
+          className="text-sm py-1"
+          >
+          Assign {cook.name}
+          </Button>
+        ))}
+        </div>
+        </div>
+        ))}
+      </div>
+      ))}
+      </CardContent>
+      </Card>
+    );
+  };
   const addLog = (message) => {
     setLogs(prevLogs => [...prevLogs, `Time ${time}: ${message}`]);
   };
@@ -82,7 +122,7 @@ const RestaurantSimulation = () => {
       }
     });
 
-  
+
     // Check for long-waiting groups
     groups.forEach(group => {
       const waitTime = time - group.arrivalTime;
@@ -223,27 +263,52 @@ const RestaurantSimulation = () => {
     return () => clearInterval(timer);
   }, [isRunning, runSimulation]); // Include runSimulation as a dependency
 
-  const handleOrderIngredient = () => {
-    if (orderIngredient && orderAmount > 0) {
-      const ingredient = INGREDIENTS.find(ing => ing.name === orderIngredient);
-      const cost = orderAmount * ingredient.cost;
-      if (money >= cost) {
-        setIncomingDeliveries(prev => [...prev, {
-          ingredient: orderIngredient,
-          amount: orderAmount,
-          timeLeft: ingredient.deliveryTime
-        }]);
-        setMoney(prev => prev - cost);
-        addLog(`Ordered ${orderAmount} units of ${orderIngredient} for $${cost}. Estimated delivery time: ${ingredient.deliveryTime} time units`);
-        setOrderIngredient('');
-        setOrderAmount(0);
-      } else {
-        addLog(`Not enough money to order ${orderAmount} units of ${orderIngredient}`);
-      }
-    } else {
-      addLog('Invalid ingredient order');
-    }
-  };
+
+  <Select 
+  onValueChange={(value) => setOrderAmount(Number(value))} 
+  value={orderAmount.toString()}
+>
+  <SelectTrigger className="mb-2">
+    <SelectValue placeholder="Select amount" />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="0">Select Amount</SelectItem>
+    {[5, 10, 15, 20, 25].map(amount => (
+      <SelectItem key={amount} value={amount.toString()}>
+        {amount}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
+
+
+const handleOrderIngredient = () => {
+  if (orderIngredient === '' || orderAmount === 0) {
+    addLog('Please select both an ingredient and an amount');
+    return;
+  }
+
+  const ingredient = INGREDIENTS.find(ing => ing.name === orderIngredient);
+  if (!ingredient) {
+    addLog(`Error: Ingredient ${orderIngredient} not found`);
+    return;
+  }
+
+  const cost = orderAmount * ingredient.cost;
+  if (money >= cost) {
+    setIncomingDeliveries(prev => [...prev, {
+      ingredient: orderIngredient,
+      amount: orderAmount,
+      timeLeft: ingredient.deliveryTime
+    }]);
+    setMoney(prev => prev - cost);
+    addLog(`Ordered ${orderAmount} units of ${orderIngredient} for $${cost}. Estimated delivery time: ${ingredient.deliveryTime} time units`);
+    setOrderIngredient('');
+    setOrderAmount(0);
+  } else {
+    addLog(`Not enough money to order ${orderAmount} units of ${orderIngredient}`);
+  }
+};  
   const boxRefs = {
     status: useRef(null),
     waitingGroups: useRef(null),
@@ -266,23 +331,23 @@ const RestaurantSimulation = () => {
     menuDetails: { width: 320, height: 200 },
   });
 
-  useEffect(() => {
-    const updateBoxSizes = () => {
-      const newSizes = {};
-      Object.entries(boxRefs).forEach(([key, ref]) => {
-        if (ref.current) {
-          newSizes[key] = {
-            width: boxSizes[key].width,
-            height: ref.current.scrollHeight + 20, // Add some padding
-          };
-        }
-      });
-      setBoxSizes(prevSizes => ({ ...prevSizes, ...newSizes }));
-    };
+  // useEffect(() => {
+  //   const updateBoxSizes = () => {
+  //     const newSizes = {};
+  //     Object.entries(boxRefs).forEach(([key, ref]) => {
+  //       if (ref.current) {
+  //         newSizes[key] = {
+  //           width: boxSizes[key].width,
+  //           height: ref.current.scrollHeight + 20, // Add some padding
+  //         };
+  //       }
+  //     });
+  //     setBoxSizes(prevSizes => ({ ...prevSizes, ...newSizes }));
+  //   };
 
-    updateBoxSizes();
-    // Rerun this effect when relevant state changes
-  }, [time, groups, orders, logs, alerts, cooks, inventory, incomingDeliveries]);
+  //   updateBoxSizes();
+  //   // Rerun this effect when relevant state changes
+  // }, [time, groups, orders, logs, alerts, cooks, inventory, incomingDeliveries]);
 
   const commonBoxStyle = {
     border: '1px solid #000',
@@ -325,27 +390,33 @@ const RestaurantSimulation = () => {
         height: boxSizes[key].height,
       }}
       size={{ width: boxSizes[key].width, height: boxSizes[key].height }}
+      minWidth={200}
       minHeight={100}
       enableResizing={commonResizeConfig}
       onResize={(e, direction, ref, delta, position) => {
         setBoxSizes(prev => ({
           ...prev,
-          [key]: { width: ref.style.width, height: ref.style.height },
+          [key]: { width: ref.offsetWidth, height: ref.offsetHeight },
         }));
       }}
+      dragHandleClassName="handle"
     >
-      <div ref={boxRefs[key]} style={commonBoxStyle}>
-        {content}
+      <div ref={boxRefs[key]} style={{...commonBoxStyle, height: '100%'}}>
+        <div className="handle" style={{cursor: 'move', padding: '5px', backgroundColor: '#f0f0f0'}}>
+          {key}
+        </div>
+        <div style={{height: 'calc(100% - 30px)', overflowY: 'auto'}}>
+          {content}
+        </div>
       </div>
     </Rnd>
   );
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Restaurant Simulation</h1>
-      <Button onClick={() => setIsRunning(!isRunning)} className="mb-4">
-        {isRunning ? 'Pause Simulation' : 'Start Simulation'}
-      </Button>
+      <h1 className="text-3xl font-bold mb-4">Heaven's Kitchen</h1>
+
+
       <div className="grid grid-cols-2 gap-4">
         {renderBox('status', (
           <>
@@ -393,62 +464,46 @@ const RestaurantSimulation = () => {
           </>
         ), 330, 0)}
 
-        {renderBox('pendingOrders', (
-          <>
-            <h2 className="text-xl font-bold mb-2">Pending Orders</h2>
-            {orders.map((order, orderIndex) => (
-              <div key={orderIndex} className="mb-2">
-                <p>{order.name} (${order.price}) - Group {order.groupId}</p>
-                {cooks.some(cook => !cook.busy) ? (
-                  cooks.map((cook, cookIndex) => (
-                    !cook.busy && (
-                      <Button
-                        key={cookIndex}
-                        onClick={() => assignOrderToCook(cookIndex, orderIndex)}
-                        className="mr-2 mt-1"
-                      >
-                        Assign to {cook.name}
-                      </Button>
-                    )
-                  ))
-                ) : (
-                  <Button className="mr-2 mt-1" disabled>No cook available</Button>
-                )}
-              </div>
-            ))}
-          </>
-        ), 660, 0)}
+{renderBox('pendingOrders', renderPendingOrders(), 660, 0)}
 
-        {renderBox('orderIngredients', (
-          <>
-            <h2 className="text-xl font-bold mb-2">Order Ingredients</h2>
-            <Select onValueChange={setOrderIngredient} value={orderIngredient}>
-              <SelectTrigger className="mb-2">
-                <SelectValue placeholder="Select ingredient" />
-              </SelectTrigger>
-              <SelectContent>
-                {INGREDIENTS.map(ing => (
-                  <SelectItem key={ing.name} value={ing.name}>
-                    {ing.name} (Cost: ${ing.cost}, Delivery Time: {ing.deliveryTime})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select onValueChange={(value) => setOrderAmount(Number(value))} value={orderAmount.toString()}>
-              <SelectTrigger className="mb-2">
-                <SelectValue placeholder="Select amount" />
-              </SelectTrigger>
-              <SelectContent>
-                {[5, 10, 15, 20, 25].map(amount => (
-                  <SelectItem key={amount} value={amount.toString()}>
-                    {amount}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleOrderIngredient}>Order Ingredient</Button>
-          </>
-        ), 0, 210)}
+{renderBox('orderIngredients', (
+  <>
+    <h2 className="text-xl font-bold mb-2">Order Ingredients</h2>
+    <Select 
+      onValueChange={(value) => setOrderIngredient(value)} 
+      value={orderIngredient}
+    >
+      <SelectTrigger className="mb-2">
+        <SelectValue placeholder="Select ingredient" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="">Select Ingredient</SelectItem>
+        {INGREDIENTS.map(ing => (
+          <SelectItem key={ing.name} value={ing.name}>
+            {ing.name} (Cost: ${ing.cost}, Delivery Time: {ing.deliveryTime})
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+    <Select 
+      onValueChange={(value) => setOrderAmount(Number(value))} 
+      value={orderAmount.toString()}
+    >
+      <SelectTrigger className="mb-2">
+        <SelectValue placeholder="Select amount" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="0">Select Amount</SelectItem>
+        {[5, 10, 15, 20, 25].map(amount => (
+          <SelectItem key={amount} value={amount.toString()}>
+            {amount}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+    <Button onClick={handleOrderIngredient}>Order Ingredient</Button>
+  </>
+), 0, 210)}
 
         {renderBox('eventLog', (
           <>
@@ -519,8 +574,28 @@ const RestaurantSimulation = () => {
           </div>
         </Rnd>
       </div>
-      <Button className="mt-4" onClick={() => setLogs([])}>Clear Log</Button>
-      <Button className="mt-4 ml-4" onClick={() => setAlerts([])}>Clear Alerts</Button>
+      <div className="mt-4 flex space-x-4">
+        <Button onClick={() => setAlerts([])}>
+          <Bell className="mr-2 h-4 w-4" />
+          Clear Alerts
+        </Button>
+        <Button onClick={() => setLogs([])}>
+          <Trash2 className="mr-2 h-4 w-4" />
+          Clear Log
+        </Button>
+        <Button 
+        onClick={() => setIsRunning(!isRunning)} 
+        className={`mb-4 ${!isRunning ? 'bg-green-500 hover:bg-green-600' : ''}`}
+      >
+        {isRunning ? (
+          <Pause className="mr-2 h-4 w-4" />
+        ) : (
+          <Play className="mr-2 h-4 w-4" />
+        )}
+        {isRunning ? 'Pause Simulation' : 'Start Simulation'}
+      </Button>
+
+      </div>
     </div>
   );
 };
