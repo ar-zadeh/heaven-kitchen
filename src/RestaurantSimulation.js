@@ -55,6 +55,17 @@ const RestaurantSimulation = () => {
   const [money, setMoney] = useState(0);
   const [groupCounter, setGroupCounter] = useState(1);
   const [alerts, setAlerts] = useState([]);
+  const [busyButtonStates, setBusyButtonStates] = useState({});
+  const handleCookClick = (cookIndex, orderIndex) => {
+    if (cooks[cookIndex].busy) {
+      setBusyButtonStates(prev => ({ ...prev, [cookIndex]: true }));
+      setTimeout(() => {
+        setBusyButtonStates(prev => ({ ...prev, [cookIndex]: false }));
+      }, 1000);
+    } else {
+      assignOrderToCook(cookIndex, orderIndex);
+    }
+  };
   const [cookCost, setCookCost] = useState(100); // Cost to hire a new cook
   const renderPendingOrders = () => {
     const groupedOrders = orders.reduce((acc, order) => {
@@ -64,39 +75,38 @@ const RestaurantSimulation = () => {
       acc[order.groupId].push(order);
       return acc;
     }, {});
-
     return (
       <Card>
-      <CardHeader>
-      <h2 className="text-xl font-bold mb-2">Pending Orders</h2>
-      </CardHeader>
-      <CardContent>
-      {Object.entries(groupedOrders).map(([groupId, groupOrders]) => (
-      <div key={groupId} className="mb-4">
-        <h3 className="text-lg font-semibold border-b pb-1 mb-2">Group {groupId}</h3>
-        {groupOrders.map((order, orderIndex) => (
-        <div key={orderIndex} className="mb-3">
-        <p className="font-medium text-sm">{order.name} (${order.price})</p>
-        <div className="grid grid-cols-2 gap-2 mt-1">
-        {cooks.map((cook, cookIndex) => (
-          <Button
-          key={cookIndex}
-          onClick={() => assignOrderToCook(cookIndex, orders.findIndex(o => o === order))}
-          disabled={cook.busy}
-          className="text-sm py-1"
-          >
-          Assign {cook.name}
-          </Button>
-        ))}
-        </div>
-        </div>
-        ))}
-      </div>
-      ))}
-      </CardContent>
+        <CardHeader>
+          <h2 className="text-xl font-bold mb-2">Pending Orders</h2>
+        </CardHeader>
+        <CardContent>
+          {Object.entries(groupedOrders).map(([groupId, groupOrders]) => (
+            <div key={groupId} className="mb-4">
+              <h3 className="text-lg font-semibold border-b pb-1 mb-2">Group {groupId}</h3>
+              {groupOrders.map((order, orderIndex) => (
+                <div key={orderIndex} className="mb-3">
+                  <p className="font-medium text-sm">{order.name} (${order.price})</p>
+                  <div className="grid grid-cols-2 gap-2 mt-1">
+                    {cooks.map((cook, cookIndex) => (
+                      <Button
+                        key={cookIndex}
+                        onClick={() => handleCookClick(cookIndex, orders.findIndex(o => o === order))}
+                        className={`text-sm py-1 ${cook.busy ? 'bg-gray-400 hover:bg-gray-500' : ''}`}
+                      >
+                        {busyButtonStates[cookIndex] ? 'BUSY' : `Assign ${cook.name}`}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ))}
+        </CardContent>
       </Card>
     );
   };
+
   const addLog = (message) => {
     setLogs(prevLogs => [...prevLogs, `Time ${time}: ${message}`]);
   };
