@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useRef  } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -8,11 +8,15 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue
+  SelectValue,
+  Checkbox,
+  Input,
 } from './components';
 import { Rnd } from 'react-rnd';
 import KitchenGUI from './KitchenGUI';
-import { Bell, Play, Trash2,Pause } from 'lucide-react';
+import { Bell, Play, Trash2, Pause, Save, Download,Settings } from 'lucide-react';
+import StatsTracker from './StatsTracker';
+const stats = new StatsTracker();
 
 const INGREDIENTS = [
   { name: 'BEEF', deliveryTime: 10, cost: 5 },
@@ -30,7 +34,22 @@ const MENU_ITEMS = [
   { name: "Chicken Sandwich", ingredients: ['CHICKEN', 'LETTUCE', 'TOMATO'], cookingTime: 12, price: 11 },
   { name: "Pizza", ingredients: ['TOMATO', 'CHEESE'], cookingTime: 20, price: 15 }
 ];
+class Random {
+  constructor(seed = 12345) {
+    this.seed = seed;
+  }
 
+  // Random number between 0 and 1
+  random() {
+    const x = Math.sin(this.seed++) * 10000;
+    return x - Math.floor(x);
+  }
+
+  // Generate exponential distribution
+  exponential(lambda) {
+    return -Math.log(1 - this.random()) / lambda;
+  }
+}
 const MAX_WAIT_TIME = 90;
 const PENALTY = 20;
 
@@ -56,6 +75,228 @@ const RestaurantSimulation = () => {
   const [groupCounter, setGroupCounter] = useState(1);
   const [alerts, setAlerts] = useState([]);
   const [busyButtonStates, setBusyButtonStates] = useState({});
+  const [useFixedLayout, setUseFixedLayout] = useState(false);
+  const [showConfig, setShowConfig] = useState(false);
+  const [randomSeed, setRandomSeed] = useState(12345);
+  const [arrivalRate, setArrivalRate] = useState(0.15);
+  const [rng] = useState(() => new Random(randomSeed));
+  const [savedLayouts, setSavedLayouts] = useState([]);
+  const [missedGroups, setMissedGroups] = useState(0);
+  const [moneySpent, setMoneySpent] = useState(0);
+  const [userId, setUserId] = useState('');
+
+  // useEffect(() => {
+  //   const userId = `user_${Math.random().toString(36).substr(2, 9)}`;
+  //   stats.setUserId(userId);
+  // }, []);
+  
+  useEffect(() => {
+    if (!isRunning) {
+      stats.saveStats();
+    }
+  }, [isRunning]);
+  // Add the cleanup effect here
+  useEffect(() => {
+    return () => {
+      stats.saveStats();
+    };
+  }, []);
+  const [selectedLayout, setSelectedLayout] = useState('');
+  useEffect(() => {
+    const layouts = JSON.parse(localStorage.getItem('savedLayouts')) || [];
+    setSavedLayouts(layouts);
+  }, []);
+  const renderSimulationConfig = () => {
+    if (!showConfig) return null;
+  
+    const downloadStats = () => {
+      const allStats = stats.getAllStats();
+      if (allStats.length === 0) {
+        alert('No stats available to download');
+        return;
+      }
+  
+      // Create CSV content
+      const csvHeader = 'timestamp,userId,customersServed,groupsServed,groupsMissed,moneyMade,moneySpent\n';
+      const csvContent = allStats.map(stat => 
+        `${stat.timestamp},${stat.userId},${stat.customersServed},${stat.groupsServed},${stat.groupsMissed},${stat.moneyMade},${stat.moneySpent}`
+      ).join('\n');
+  
+      // Create and trigger download
+      const blob = new Blob([csvHeader + csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'restaurant_stats.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    };
+    
+    return (
+      <Card className="mb-4">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold">Simulation Configuration</h2>
+            <Button 
+              onClick={() => setShowConfig(false)}
+              className="bg-gray-500 hover:bg-gray-600"
+            >
+              Close
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex space-x-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">User ID</label>
+              <Input
+                type="text"
+                value={userId}
+                onChange={(e) => {
+                  setUserId(e.target.value);
+                  stats.setUserId(e.target.value);
+                }}
+                placeholder="Enter experiment ID"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Random Seed</label>
+              <Input
+                type="number"
+                value={randomSeed}
+                onChange={(e) => {
+                  const newSeed = parseInt(e.target.value);
+                  setRandomSeed(newSeed);
+                  rng.seed = newSeed;
+                }}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Average Arrivals per Minute (λ)</label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0.1"
+                max="10"
+                value={arrivalRate}
+                onChange={(e) => setArrivalRate(parseFloat(e.target.value))}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <div className="flex space-x-4">
+            <Button onClick={downloadStats}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Stats CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+  
+
+
+  const saveCurrentLayout = () => {
+    const layoutName = prompt("Enter a name for this layout:");
+    if (layoutName) {
+      const newLayout = { name: layoutName, positions: boxPositions };
+      const updatedLayouts = [...savedLayouts, newLayout];
+      setSavedLayouts(updatedLayouts);
+      localStorage.setItem('savedLayouts', JSON.stringify(updatedLayouts));
+      alert(`Layout "${layoutName}" saved successfully!`);
+    }
+  };
+
+  const loadSavedLayout = () => {
+    const layoutOptions = savedLayouts.map(layout => layout.name);
+    const selectedLayoutName = prompt(`Select a layout to load:\n${layoutOptions.join('\n')}`);
+
+    if (selectedLayoutName) {
+      const layout = savedLayouts.find(l => l.name === selectedLayoutName);
+      if (layout) {
+        setBoxPositions(layout.positions);
+        setUseFixedLayout(true);
+        alert(`Layout "${selectedLayoutName}" loaded successfully!`);
+      } else {
+        alert("Layout not found. Please try again.");
+      }
+    } else {
+      alert("No layout selected.");
+    }
+  };
+
+
+  const initialLayout = {
+    menuDetails: {
+      width: 342,
+      height: 222,
+      x: 100,
+      y: 159
+    },
+    waitingGroups: {
+      width: 342,
+      height: 222,
+      x: 103,
+      y: 397
+    },
+    status: {
+      width: 342,
+      height: 842,
+      x: 705,
+      y: 73
+    },
+    pendingOrders: {
+      width: 342,
+      height: 836,
+      x: 1059,
+      y: 75
+    },
+    hireCook: {
+      width: 342,
+      height: 222,
+      x: 1412,
+      y: 90
+    },
+    orderIngredients: {
+      width: 342,
+      height: 237,
+      x: 1414,
+      y: 328
+    },
+    alerts: {
+      width: 342,
+      height: 222,
+      x: 1761,
+      y: 91
+    },
+    eventLog: {
+      width: 342,
+      height: 232,
+      x: 1765,
+      y: 329
+    },
+    kitchenGUI: {
+      width: 548,
+      height: 427,
+      x: 1436,
+      y: 606
+    }
+  };
+  const [boxPositions, setBoxPositions] = useState(initialLayout);
+
+  const handleLayoutToggle = (checked) => {
+    setUseFixedLayout(checked);
+    if (checked) {
+      setBoxPositions(initialLayout);
+    }
+  };
+
+
   const handleCookClick = (cookIndex, orderIndex) => {
     if (cooks[cookIndex].busy) {
       setBusyButtonStates(prev => ({ ...prev, [cookIndex]: true }));
@@ -120,6 +361,8 @@ const RestaurantSimulation = () => {
       setMoney(prevMoney => prevMoney - cookCost);
       addLog(`Hired a new cook for $${cookCost}`);
       setCookCost(prevCost => Math.floor(prevCost * 1.5)); // Increase the cost for the next cook
+      stats.addMoneySpent(cookCost);
+
     } else {
       addAlert(`Not enough money to hire a new cook. Need $${cookCost}.`);
     }
@@ -143,17 +386,24 @@ const RestaurantSimulation = () => {
   };
 
   const addGroup = () => {
-    const groupSize = [1, 2, 3, 4, 5, 6][Math.floor(Math.random() * 6)];
+    const groupSize = Math.floor(rng.random() * 6) + 1; // 1 to 6 people
     const groupOrders = Array(groupSize).fill().map(() => ({
-      ...MENU_ITEMS[Math.floor(Math.random() * MENU_ITEMS.length)],
+      ...MENU_ITEMS[Math.floor(rng.random() * MENU_ITEMS.length)],
       groupId: groupCounter
     }));
-    const newGroup = { id: groupCounter, size: groupSize, orders: groupOrders, arrivalTime: time, completedOrders: 0 };
+    const newGroup = { 
+      id: groupCounter, 
+      size: groupSize, 
+      orders: groupOrders, 
+      arrivalTime: time, 
+      completedOrders: 0 
+    };
     setGroups(prev => [...prev, newGroup]);
     setOrders(prev => [...prev, ...groupOrders]);
     addLog(`New group ${groupCounter} of ${groupSize} arrived and ordered ${groupOrders.map(o => o.name).join(', ')}`);
-    setGroupCounter(groupCounter => groupCounter + 1);
+    setGroupCounter(prev => prev + 1);
   };
+
 
   const assignOrderToCook = (cookIndex, orderIndex) => {
     const order = orders[orderIndex];
@@ -163,6 +413,7 @@ const RestaurantSimulation = () => {
       ));
       setOrders(prev => prev.filter((_, i) => i !== orderIndex));
       addLog(`Assigned ${order.name} to ${cooks[cookIndex].name}`);
+      stats.incrementCustomersServed(); // Track each order as a customer served
     } else {
       addLog(`Not enough ingredients for ${order.name}`);
     }
@@ -196,10 +447,13 @@ const RestaurantSimulation = () => {
                 const baseEarnings = group.size * 10; // Assuming average price of 10
                 const penalty = waitTime > MAX_WAIT_TIME ? PENALTY : 0;
                 const totalEarned = baseEarnings + tip - penalty;
+                stats.addMoneyMade(totalEarned);
+                stats.incrementGroupsServed(); // Add this line here
 
                 setMoney(prev => prev + totalEarned);
                 addLog(`Group ${group.id} of ${group.size} finished. Earned $${totalEarned} (${baseEarnings} + ${tip} tip - ${penalty} penalty)`);
 
+                
                 return prevGroups.filter((_, i) => i !== groupIndex);
               } else {
                 return [
@@ -245,11 +499,15 @@ const RestaurantSimulation = () => {
       const updatedGroups = prev.map(group => {
         const waitTime = time - group.arrivalTime;
         if (waitTime >= MAX_WAIT_TIME && group.completedOrders === 0) {
+          stats.incrementGroupsMissed();
           addLog(`Group ${group.id} of ${group.size} left due to long wait time. Lost $${PENALTY}`);
           setMoney(prevMoney => prevMoney - PENALTY);
           setOrders(prevOrders => prevOrders.filter(order => order.groupId !== group.id));
           return null;
         }
+        
+
+        
         return group;
       });
       return updatedGroups.filter(group => group !== null);
@@ -258,12 +516,22 @@ const RestaurantSimulation = () => {
 
   const runSimulation = () => {
     setTime(prev => prev + 1);
-    if (Math.random() < 0.3) addGroup();
+    
+    // Generate exponentially distributed arrival times
+    const timeUntilNextArrival = rng.exponential(arrivalRate);
+    
+    // If the time until next arrival is less than 1 (our time step),
+    // add a new group
+    if (timeUntilNextArrival < 1) {
+      addGroup();
+    }
+    
     updateCooks();
     updateDeliveries();
     updateGroups();
     checkForAlerts();
   };
+
 
   useEffect(() => {
     let timer;
@@ -272,7 +540,13 @@ const RestaurantSimulation = () => {
     }
     return () => clearInterval(timer);
   }, [isRunning, runSimulation]); // Include runSimulation as a dependency
-
+  // useEffect(() => {
+  //   // You can generate a random user ID or use any other method to identify users
+  //   const userId = `user_${Math.random().toString(36).substr(2, 9)}`;
+  //   stats.setUserId(userId);
+  // }, []);
+  
+  
 
   <Select 
   onValueChange={(value) => setOrderAmount(Number(value))} 
@@ -306,6 +580,9 @@ const handleOrderIngredient = () => {
 
   const cost = orderAmount * ingredient.cost;
   if (money >= cost) {
+    stats.addMoneySpent(cost);
+
+
     setIncomingDeliveries(prev => [...prev, {
       ingredient: orderIngredient,
       amount: orderAmount,
@@ -391,28 +668,46 @@ const handleOrderIngredient = () => {
     topLeft:true 
   };
 
-  const renderBox = (key, content, x, y) => (
+  const renderBox = (key, content) => (
     <Rnd
       default={{
-        x: x,
-        y: y,
-        width: boxSizes[key].width,
-        height: boxSizes[key].height,
+        x: boxPositions[key].x,
+        y: boxPositions[key].y,
+        width: boxPositions[key].width,
+        height: boxPositions[key].height,
       }}
-      size={{ width: boxSizes[key].width, height: boxSizes[key].height }}
+      size={{ width: boxPositions[key].width, height: boxPositions[key].height }}
+      position={{ x: boxPositions[key].x, y: boxPositions[key].y }}
       minWidth={200}
       minHeight={100}
-      enableResizing={commonResizeConfig}
+      enableResizing={!useFixedLayout}
+      disableDragging={useFixedLayout}
+      onDragStop={(e, d) => {
+        if (!useFixedLayout) {
+          setBoxPositions(prev => ({
+            ...prev,
+            [key]: { ...prev[key], x: d.x, y: d.y }
+          }));
+        }
+      }}
       onResize={(e, direction, ref, delta, position) => {
-        setBoxSizes(prev => ({
-          ...prev,
-          [key]: { width: ref.offsetWidth, height: ref.offsetHeight },
-        }));
+        if (!useFixedLayout) {
+          setBoxPositions(prev => ({
+            ...prev,
+            [key]: { 
+              ...prev[key], 
+              width: ref.offsetWidth, 
+              height: ref.offsetHeight,
+              x: position.x,
+              y: position.y
+            }
+          }));
+        }
       }}
       dragHandleClassName="handle"
     >
       <div ref={boxRefs[key]} style={{...commonBoxStyle, height: '100%'}}>
-        <div className="handle" style={{cursor: 'move', padding: '5px', backgroundColor: '#f0f0f0'}}>
+        <div className="handle" style={{cursor: useFixedLayout ? 'default' : 'move', padding: '5px', backgroundColor: '#f0f0f0'}}>
           {key}
         </div>
         <div style={{height: 'calc(100% - 30px)', overflowY: 'auto'}}>
@@ -425,9 +720,34 @@ const handleOrderIngredient = () => {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-4">Heaven's Kitchen</h1>
+      
+      <div className="mb-4 flex items-center space-x-4">
+        <Checkbox
+          id="fixed-layout"
+          checked={useFixedLayout}
+          onCheckedChange={handleLayoutToggle}
+          label="Use Fixed Layout"
+        />
+        <Button onClick={saveCurrentLayout} className="flex items-center">
+          <Save className="mr-2 h-4 w-4" />
+          Save Current Layout
+        </Button>
+        <Button onClick={loadSavedLayout} className="flex items-center">
+          <Download className="mr-2 h-4 w-4" />
+          Load Saved Layout
+        </Button>
+        <Button 
+          onClick={() => setShowConfig(!showConfig)} 
+          className="flex items-center"
+        >
+          <Settings className="mr-2 h-4 w-4" />
+          {showConfig ? 'Hide Configuration' : 'Show Configuration'}
+        </Button>
+      </div>
 
+      {renderSimulationConfig()}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="relative" style={{ height: '1000px', width: '2000px' }}>
         {renderBox('status', (
           <>
             <h2 className="text-xl font-bold mb-2">Restaurant Status</h2>
@@ -474,7 +794,7 @@ const handleOrderIngredient = () => {
           </>
         ), 330, 0)}
 
-{renderBox('pendingOrders', renderPendingOrders(), 660, 0)}
+{renderBox('pendingOrders', renderPendingOrders())}
 
 {renderBox('orderIngredients', (
   <>
