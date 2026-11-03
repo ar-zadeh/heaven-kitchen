@@ -21,3 +21,20 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# study data are never committed (participant and expert gaze data)
+data/private/
+gaze_data/
+recorded_videos/
+*.mp4
+advice_output_*.mp3
+gaze_sequences_expert.csv
+Participants.csv
+Participants.xlsx
+
+# analysis outputs and local secrets
+analysis/output/
+.env
+__pycache__/
+.ipynb_checkpoints/
+.Rhistory

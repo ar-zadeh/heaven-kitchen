@@ -1,0 +1,15 @@
+# Python packages imported by adviser.py (versions used in the study were not recorded).
+# Windows only: pywin32 and screen capture of the Chrome window.
+flask
+flask-cors
+google-generativeai
+gTTS
+mss
+numpy
+opencv-python
+pandas
+pygame
+pygetwindow
+pywin32
+typing_extensions
+websockets

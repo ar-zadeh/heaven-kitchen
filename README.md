@@ -1,74 +1,64 @@
-# Live demo
+# Heaven's Kitchen and the LLM-Powered Feedback Generator (LPFG)
 
-The game is live on https://heaven-kitchen.vercel.app/ please try the game and let us know of your opinion!
+This repository contains the code for
 
-# Getting Started with Create React App
+> Bagherzadeh, A., & Tehranchi, F. *Designing an LLM-Powered Feedback Generator to Enhance Performance.* Manuscript under review at *Artificial Intelligence for Engineering Design, Analysis and Manufacturing* (AI EDAM).
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+| Folder | Contents |
+|---|---|
+| `src/`, `public/` | **Heaven's Kitchen**, the multi-cue decision-making simulation used in the study (React). Live demo: https://heaven-kitchen.vercel.app/ |
+| `lpfg/` | **LPFG**, the gaze-based feedback generator as deployed in the study (Python), its exact system instruction, and a synthetic expert reference sequence. |
+| `analysis/` | R scripts that compute every statistic, table, and figure reported in the paper, the generator for the synthetic dataset, and the original exploratory notebook. |
+| `data/synthetic/` | A synthetic dataset with the same structure as the analyzed dataset. |
 
-## Available Scripts
+## What this repository does and does not reproduce
 
-In the project directory, you can run:
+- **Code validation (anyone).** Every analysis script runs end to end on `data/synthetic/Participants_SYNTHETIC.csv`. The numbers it prints are **not** the paper's results; they show that the code runs and what it computes.
+- **Reproduction of the reported results (requires the participant data).** The analyzed dataset is not public, to protect participant privacy. De-identified data are available from the corresponding author on request, subject to IRB approval. Running the same scripts on that file reproduces the reported values (see the table below).
+- **LPFG.** The code is provided as deployed so that the pipeline, prompt, and response schema can be inspected. Running it live requires the VR eye-tracking setup, Chrome with the bounding-box reporter, and a Gemini API key; see [`lpfg/README.md`](lpfg/README.md).
 
-### `npm start`
+No participant data and no recording of the expert's gaze are included in this repository.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Running the analysis
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Requirements: R 4.4 or later with the packages `ARTool`, `car`, `dplyr`, `ggplot2`, `readr`, and `tidyr`.
 
-### `npm test`
+Run every script from the repository root. With no argument a script uses the synthetic data; pass a path to use the participant data:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+```sh
+Rscript analysis/reviewer_round3_analysis.R                          # synthetic data
+Rscript analysis/reviewer_round3_analysis.R path/to/Participants.csv  # participant data
+```
 
-### `npm run build`
+The path can also be set once with the environment variable `HK_DATA`. Reports and figures are written to `analysis/output/`, which git ignores. `Rscript analysis/make_synthetic_data.R` regenerates the synthetic dataset.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Where each reported result comes from
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+| Result in the paper | Script |
+|---|---|
+| ART ANOVAs for groups served and failed groups (Tables 6–8) | `analysis/reviewer_round3_analysis.R`, section 2 |
+| Session 2 dispersion: Levene, Brown-Forsythe, and Fisher's exact tests | `analysis/reviewer_round3_analysis.R`, section 3 |
+| Post hoc comparison after removing participants at or above the 57-group benchmark | `analysis/reviewer_round3_analysis.R`, section 4 |
+| Sensitivity analysis for the excluded participants and tipping points (Appendix B, Table A2) | `analysis/reviewer_round3_analysis.R`, section 6 |
+| Learning analyses for RQ3: ART mixed model (Session × AI feedback), change-score ART, repeated-measures ANOVA, change-score means and SDs | `analysis/replicate_original_art_analysis.R` |
+| Descriptive statistics (means, SDs, medians, modes) | `analysis/validate_paper_analysis.R` and `analysis/replicate_original_art_analysis.R` |
+| Figures 3–5 | `analysis/reproduce_paper_figures.R` |
+| Supplementary sensitivity tests from an earlier revision (Mann-Whitney, Welch) | `analysis/reviewer_statistical_addendum.R` |
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+`analysis/notebooks/PlotGenerators.ipynb` is the original exploratory Python analysis. It is kept for transparency, but no reported value depends on it; its outputs were removed because they contained participant-level results.
 
-### `npm run eject`
+## Running the game
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The game is live at https://heaven-kitchen.vercel.app/. To run it locally (Node.js required):
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```sh
+npm install
+npm start    # development server at http://localhost:3000
+npm run build
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app); see its documentation for the other available scripts.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## License
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Apache License 2.0; see [`LICENSE`](LICENSE).
